@@ -1,2 +1,1 @@
-# r-avanzado-25a
-Curso de R Avanzado
+# Curso de R Avanzado

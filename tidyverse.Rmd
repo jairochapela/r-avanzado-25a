@@ -1,0 +1,55 @@
+---
+title: "tidy1"
+output: html_document
+---
+
+Carga de librerías.
+```{r}
+library(tidyverse)
+```
+
+
+Cargar los datos.
+```{r}
+irisdata <- read_csv("data/iris.data")
+colnames(irisdata) <- c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width", "Species")
+```
+
+Conversion de las especies en factor
+```{r}
+irisdata$Species <- as.factor(irisdata$Species)
+```
+
+
+```{r}
+str(irisdata)
+```
+
+```{r}
+head(irisdata)
+```
+
+
+Resumen estadístico de las variables numéricas.
+```{r}
+summary(irisdata)
+```
+
+Gráfica con los valores.
+```{r}
+hist(irisdata$Sepal.Length, 
+     main="Histograma de longitud de sépalo",
+     xlab="Longitud de sépalo (cm)",
+     col="yellow",
+     breaks=20)
+```
+
+```{r}
+ggplot(irisdata, aes(x=Sepal.Length, y=Sepal.Width)) +
+  geom_point(aes(color=Species)) +
+  labs(title="Diagrama de dispersión de sépalo",
+       x="Longitud de sépalo (cm)",
+       y="Anchura de sépalo (cm)") +
+  theme_minimal()
+```
+

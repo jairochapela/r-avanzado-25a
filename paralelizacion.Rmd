@@ -1,0 +1,90 @@
+---
+title: "Paralelización en R"
+output: html_document
+---
+
+
+# Carga de librerías necesarias
+
+```{r}
+# Para manipular datos: dplyr
+library(dplyr)
+
+# Para aplicación de funciones en paralelo:
+library(future)
+library(furrr)
+```
+
+# Configuración del plan de paralelización
+
+Dependiendo del número de procesadores que tengamos, ajustaremos el plan
+de paralelización.
+
+```{r}
+num_cores <- parallel::detectCores()
+plan(multisession, workers = num_cores-1)  # Ajuste 'workers' según su CPU
+```
+
+# Particionado de los datos
+
+Dividimos el conjunto de datos en partes de tamaños parecidos para cada núcleo.
+
+```{r}
+data(iris)
+
+iris_grupos <- iris %>% group_split(Species)
+```
+
+# Procesamiento de los grupos en paralelo
+
+Para cada uno de los grupos, se aplicará una función que calcula la media de
+cada variable numérica. Todos los cálculos se harán en paralelo, aprovechando
+las funciones de la librería `furrr`.
+
+```{r}
+resultado <- future_map(iris_grupos, function(grupo) {
+  grupo %>%
+    summarise(
+      Sepal.Length = mean(Sepal.Length),
+      Sepal.Width  = mean(Sepal.Width),
+      Petal.Length = mean(Petal.Length),
+      Petal.Width  = mean(Petal.Width)
+    )
+})
+
+resultado
+```
+
+Cada uno de los bloques de datos se procesará por separado en un worker distinto.
+En este ejemplo, se calculan los promedios de cada variable para cada especie de flor;
+integrándose todo en un dataframe que contiene, en cada fila, además el nombre de la especie y
+el número de muestras de cada bloque.
+
+Si luego queremos unificar todos los resultados, podemos utilizar las funciones
+de siempre para hacer una media ponderada.
+
+```{r}
+# Cálculo de las medias por grupo con future_map_dfr, con dplyr::summarise
+# para cada uno de los grupos en paralelo, mediante furrr.
+resultado <- future_map_dfr(iris_grupos, function(grupo) {
+  grupo %>%
+    summarise(
+      Species = unique(Species),
+      Sepal.Length = mean(Sepal.Length),
+      Sepal.Width  = mean(Sepal.Width),
+      Petal.Length = mean(Petal.Length),
+      Petal.Width  = mean(Petal.Width),
+      n = n()
+    )
+})
+
+# Cálculo de la media ponderada con dplyr::summarise
+resultado %>%
+  summarise(
+    Total_Sepal.Length = sum(Sepal.Length * n) / sum(n),
+    Total_Sepal.Width  = sum(Sepal.Width * n) / sum(n),
+    Total_Petal.Length = sum(Petal.Length * n) / sum(n),
+    Total_Petal.Width  = sum(Petal.Width * n) / sum(n)
+  )
+```
+

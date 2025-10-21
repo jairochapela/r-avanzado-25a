@@ -1,0 +1,126 @@
+---
+title: "Probando Spark"
+output: html_document
+---
+
+# Configuración y ajustes
+
+```{r}
+library(sparklyr)
+```
+
+```{r}
+# Para evitar problemas con versiones de Java en el entorno local, indicaré a
+# R la ruta de instalación de Java 17 en mi equipo.
+Sys.setenv(JAVA_HOME = "/opt/homebrew/opt/openjdk@17")
+Sys.setenv(PATH = paste(Sys.getenv("JAVA_HOME"), "bin",
+                        sep = "/",
+                        Sys.getenv("PATH")))
+
+# Sólo usaremos esto en caso de trabajar con un cluster local
+spark_install(version = "4.0.1")
+```
+
+# Conexión al cluster Spark
+
+```{r}
+# Conexión al cluster (local) de Spark
+sc <- spark_connect("local[*]", app_name = "Demo1")
+```
+
+# Carga de datos en el clúster Spark
+
+```{r}
+if (!file.exists("data/yellow_tripdata_2025-08.parquet")) {
+  download.file(
+    "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-08.parquet",
+    destfile = "data/yellow_tripdata_2025-08.parquet"
+    )
+}
+```
+
+```{r}
+df <- spark_read_parquet(
+  sc,
+  name = "taxis",
+  "data/yellow_tripdata_2025-08.parquet"
+)
+```
+
+
+```{r}
+sdf_schema(df)
+```
+
+# Operaciones con dplyr en Spark
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+df2 <- df %>%
+  mutate(
+    duration_min = (unix_timestamp(tpep_dropoff_datetime) - unix_timestamp(tpep_pickup_datetime)) / 60
+  )
+```
+
+```{r}
+head(df2)
+```
+
+Contabilizar registros
+
+```{r}
+df %>% summarise(n = n())
+```
+
+Cargamos las zonas en Spark
+
+```{r}
+zonas <- spark_read_csv(
+  sc,
+  name = "zonas",
+  path = "data/taxi_zone_lookup.csv",
+  header = TRUE,
+  infer_schema = TRUE
+)
+```
+
+
+Fusionamos toda la información
+
+```{r}
+df_zonas <- df2 %>%
+  left_join(zonas, by = c("PULocationID" = "LocationID"))
+```
+
+
+Consulta de los datos fusionados
+```{r}
+df_zonas %>%
+  select(Zone, trip_distance, duration_min, total_amount) %>%
+  head(10) %>%
+  collect()
+```
+
+
+```{r}
+df_zonas %>%
+  select(Zone, trip_distance, duration_min, total_amount) %>%
+  group_by(Zone) %>%
+  summarise(
+    Zone = Zone,
+    distancia_promedio = mean(trip_distance),
+    duracion_promedio = mean(duration_min)
+  ) %>%
+  collect()
+```
+
+
+# Desconexión del clúster
+
+```{r}
+spark_disconnect(sc)
+```
+
