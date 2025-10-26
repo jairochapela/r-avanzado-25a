@@ -1,0 +1,80 @@
+---
+title: "Análisis exploratorio con datos de Diabetes"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+diabetes <- read_csv("data/diabetes.csv")
+```
+
+```{r}
+#diabetes$Outcome <- as.factor(diabetes$Outcome)
+```
+
+```{r}
+sum(is.na(diabetes))
+```
+
+
+```{r}
+summary(diabetes)
+```
+
+
+```{r}
+ggplot(diabetes, aes(x=Glucose)) +
+  geom_histogram(binwidth = 10) +
+  labs(title="Distribución de niveles de glucosa",
+       x="Niveles de glucosa",
+       y="Frecuencia")
+```
+
+```{r}
+ggplot(diabetes, aes(x=Age, y=Glucose, color=factor(Outcome))) +
+  geom_point()
+```
+
+```{r}
+pairs(
+  diabetes %>% select(-Outcome),
+  col = ifelse(diabetes$Outcome == 1, "red", "blue"))
+```
+
+```{r}
+cor_matrix <- cor(diabetes %>% select(-Outcome))
+m <- as.data.frame(as.table(cor_matrix))
+```
+
+```{r}
+ggplot(m, aes(x=Var1, y=Var2, fill=Freq)) +
+  geom_tile() +
+  geom_text(aes(label=round(Freq,1)), color="yellow") +
+  scale_fill_gradient2(low="blue", high="red", mid="black", limit=c(-1, 1)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+## Modelado
+
+Regresión logística, para predecir la probabilidad de diabetes basado en otra
+variable.
+
+
+```{r}
+modelo <- glm(Outcome ~ Glucose + BMI + Age, data=diabetes, family=binomial)
+summary(modelo)
+```
+
+```{r}
+ggplot(diabetes, aes(x=Glucose, y = Outcome)) +
+  geom_point() +
+  stat_smooth(method = "glm", method.args = list(family="binomial"), color="blue")
+```
+
+
+

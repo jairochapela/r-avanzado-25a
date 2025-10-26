@@ -1,0 +1,294 @@
+---
+title: "Análisis Exploratorio de Datos"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Introducción
+
+Trabajaremos con el dataset de muestra `diamonds`
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+data("diamonds")
+```
+
+
+
+# Técnicas cuantitativas
+
+## Variación
+
+```{r}
+summary(diamonds$price)
+```
+
+```{r}
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = 0.5)
+```
+
+#### Valores típicos
+
+```{r}
+# Mean
+mean(diamonds$price)
+```
+
+```{r}
+# Median
+median(diamonds$price)
+```
+
+```{r}
+# Standard Deviation
+sd(diamonds$price)
+```
+
+```{r}
+# IQR: Interquartile Range
+IQR(diamonds$price)
+```
+
+```{r}
+# Mediana y media de precios
+median_price <- median(diamonds$price)
+mean_price <- mean(diamonds$price)
+```
+
+
+```{r}
+# Moda de precios
+mode_price <- as.numeric(names(sort(table(diamonds$price), decreasing = TRUE)[1]))
+mode_price
+```
+
+
+
+
+```{r}
+# Distribución de precios
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram(binwidth = 500)
+```
+
+
+
+
+
+```{r}
+smaller <- diamonds |> 
+  filter(carat < 3)
+
+ggplot(smaller, aes(x = carat)) +
+  geom_histogram(binwidth = 0.01)
+```
+
+#### Valores inusuales (outliers)
+
+```{r}
+# Obtención de percentiles 0.05% y 99.95%
+q <- quantile(diamonds$y, probs = c(0.0005, 0.9995))
+q
+```
+
+
+```{r}
+# Cuántros valores de y están fuera de estos percentiles
+sum(diamonds$y < q[1] | diamonds$y > q[2])
+```
+
+
+
+
+
+
+```{r}
+ggplot(diamonds, aes(x = y)) + 
+  geom_histogram(binwidth = 0.5) +
+  coord_cartesian(ylim = c(0, 50))
+```
+
+
+```{r}
+unusual <- diamonds |> 
+  filter(y < 3 | y > 20) |> 
+  select(price, x, y, z) |>
+  arrange(y)
+unusual
+```
+
+```{r}
+unusual <- diamonds |> 
+  filter(y < q[1] | y > q[2]) |> 
+  select(price, x, y, z) |>
+  arrange(y)
+unusual
+```
+
+
+```{r}
+# Descartamos los valores atípicos
+diamonds2 <- diamonds |> 
+  mutate(y = if_else(y < 3 | y > 20, NA, y))
+
+# Visualizamos de nuevo
+ggplot(diamonds2, aes(x = x, y = y)) + 
+  geom_point()
+```
+
+```{r}
+modelo <- lm(y ~ x, data = diamonds2)
+summary(modelo)
+```
+
+```{r}
+ggplot(diamonds2, aes(x = x, y = y)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+
+
+## Valores de tendencia central ?
+
+Moda ?
+
+
+## Covariación
+
+```{r}
+ggplot(diamonds, aes(x = price)) + 
+  geom_freqpoly(aes(color = cut), binwidth = 500, linewidth = 0.75)
+```
+
+
+```{r}
+# Gráfica normalizada
+ggplot(diamonds, aes(x = price, y = after_stat(density))) + 
+  geom_freqpoly(aes(color = cut), binwidth = 500, linewidth = 0.75)
+```
+
+
+```{r}
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_boxplot()
+```
+
+
+
+
+
+
+
+### Con una variable categórica y otra numérica
+
+### Con dos variables categóricas
+
+Para visualizar la covariación entre variables categóricas, deberá contar el número de observaciones para cada combinación de niveles de estas variables categóricas. Una forma de hacerlo es con `geom_count()`:
+
+```{r}
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count()
+```
+
+```{r}
+diamonds |> 
+  count(color, cut) |>  
+  ggplot(aes(x = color, y = cut)) +
+  geom_tile(aes(fill = n))
+```
+
+
+### Con dos variables numéricas
+
+
+```{r}
+cor(diamonds$carat, diamonds$price)
+```
+
+```{r}
+ggplot(smaller, aes(x = carat, y = price)) +
+  geom_point()
+```
+
+```{r}
+ggplot(smaller, aes(x = carat, y = price)) + 
+  geom_point(alpha = 1 / 100)
+```
+
+
+## Distribución de frecuencias ?
+
+```{r}
+# Análisis cuantitativo de distribución de frecuencias
+# Resumen estadístico
+summary(diamonds$price)
+```
+
+
+```{r}
+# Matriz de correlaciones
+cor(diamonds[, sapply(diamonds, is.numeric)])
+```
+
+
+# Técnicas gráficas
+
+## Gráficos para una variable numérica
+
+## Gráficos para una variable categórica (frecuencias)
+
+```{r}
+# Gráfico de barras para la variable cut
+ggplot(diamonds, aes(x = cut)) +
+  geom_bar()
+```
+
+
+## Comparación numérica por grupo
+
+## Relaciones entre variable categórica y numérica
+
+```{r}
+# Cut vs price
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_boxplot()
+```
+
+
+## Relaciones entre dos variables numéricas
+
+```{r}
+# scatterplot carat vs price
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(alpha = 1 / 10)
+```
+
+
+## Relaciones entre dos variables categóricas
+
+```{r}
+# color vs cut en diamonds con geom_tile() y count()
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count()
+```
+
+
+
+
+## Facetas, agrupación y estéticas
+
+```{r}
+#	Uso de facet_wrap() o facet_grid() para comparar subgrupos visualmente.
+#	Uso de estéticas (color, shape, size) para añadir dimensión.
+#	Buenas prácticas en visualización (etiquetas claras, ejes, leyendas, evitar sobrecarga).
+ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
+  geom_point() +
+  facet_wrap(~ color)
+```
+
+
+

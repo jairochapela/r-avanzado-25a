@@ -1,0 +1,97 @@
+---
+title: "Mapas interactivos"
+output: html_document
+---
+
+```{r}
+library(leaflet)
+```
+
+
+```{r}
+m <- leaflet() %>%
+  addTiles() %>%
+  setView(lng = -3.7038, lat = 40.4168, zoom = 6)
+
+m
+```
+
+
+```{r}
+m <- leaflet() %>%
+  addTiles() %>%
+  setView(lng = -3.7038, lat = 40.4168, zoom = 4) %>%
+  addMarkers(lng = -3.7038, lat = 40.4168, popup = "Madrid") %>%
+  addMarkers(lng = -0.1276, lat = 51.5074, popup = "London")
+
+m
+```
+
+
+```{r}
+data("quakes")
+```
+
+```{r}
+m <- leaflet(data = quakes) %>%
+  addTiles() %>%
+  addCircleMarkers(~long, ~lat, radius = ~mag * 2,
+    popup = ~paste("Magnitude:", mag, "<br>",
+    "Depth:", depth, "m"))
+m
+```
+
+
+
+```{r}
+m <- leaflet() %>%
+  addTiles(group = "OpenStreetMap") %>%
+  addProviderTiles(providers$Esri.OceanBasemap, group = "Ocean Basemap") %>%
+  setView(lng = -3.7038, lat = 40.4168, zoom = 6) %>%
+  addLayersControl(
+    baseGroups = c("OpenStreetMap", "Ocean Basemap"),
+    options = layersControlOptions(collapsed = TRUE)
+)
+m
+```
+
+```{r}
+library(leaflet.extras)
+
+m <- leaflet(data = quakes) %>%
+  addTiles() %>%
+  addHeatmap(lng = ~long, lat = ~lat, intensity = ~mag, blur = 10, max = 0.05, radius = 15)
+m
+```
+
+
+```{r}
+library(maps)
+mapStates = map("state", fill = TRUE, plot = FALSE)
+leaflet(data = mapStates) %>%
+  addTiles() %>%
+  addPolygons(fillColor = topo.colors(10, alpha = NULL), stroke = FALSE)
+```
+
+
+```{r}
+library(rworldmap)
+world_map <- getMap(resolution = "low")
+
+# Datos inventados
+datos <- data.frame(
+  country = c("Spain", "France", "Germany", "Italy", "Portugal"),
+  value = c(10, 20, 30, 40, 50)
+)
+
+paleta <- colorNumeric(palette = "plasma", domain = datos$value, na.color = "transparent")
+
+leaflet(data = world_map) %>%
+  addTiles() %>%
+  addPolygons(fillColor = ~ paleta(datos$value[match(world_map$NAME, datos$country)]), 
+              stroke = TRUE, color = "white", weight = 1,
+              popup = ~paste("Datos para ", NAME, ": ", datos$value[match(world_map$NAME, datos$country)])) %>%
+  addLegend(pal = paleta, values = datos$value, title = "Valores por país", position = "bottomright")
+```
+```
+

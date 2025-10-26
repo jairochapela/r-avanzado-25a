@@ -1,0 +1,78 @@
+---
+title: "Online Retail"
+output: html_document
+---
+
+# Carga de librerías
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(magrittr)
+```
+
+# Carga de datos a partir del fichero Excel
+
+Se pueden consultar las hojas del Excel con `excel_sheets("data/Online_Retail.xlsx")`.
+
+```{r}
+retail_data <- read_excel("data/Online_Retail.xlsx", sheet = "Online Retail")
+head(retail_data)
+```
+
+```{r}
+glimpse(retail_data)
+```
+```{r}
+retail_data %<>% mutate(Country = as.factor(Country))
+```
+
+```{r}
+summary(retail_data)
+```
+# Limpieza de datos
+
+ * Eliminar filas con valores NA
+ * Eliminar filas con cantidades negativas o extremadamente altas
+ 
+```{r}
+retail_data <- retail_data %>%
+  drop_na() %>%
+  filter(Quantity > 0 & Quantity < 40000)
+```
+
+```{r}
+summary(retail_data)
+```
+
+Obtención de lista de clientes
+
+```{r}
+clientes <- retail_data %>%
+  select(CustomerID) %>%
+  distinct(CustomerID)
+```
+
+
+```{r}
+datos_clientes <- read_csv("data/customers.csv")
+head(datos_clientes)
+```
+
+```{r}
+inner_join(retail_data, datos_clientes, by = "CustomerID") %>%
+  select(CustomerID, Country, Name, Email, Phone, DOB, InvoiceNo, Quantity, UnitPrice) %>%
+  group_by(CustomerID) %>%
+  summarise(
+    Total_Spent = sum(Quantity * UnitPrice),
+    Num_Orders = n_distinct(InvoiceNo),
+    Name = first(Name),
+    Email = first(Email),
+    Phone = first(Phone),
+    DOB = first(DOB)
+    ) %>%
+  select(Name, Email, Phone, DOB, Total_Spent, Num_Orders) %>%
+  arrange(desc(Total_Spent)) %>%
+  head(10)
+```
+
